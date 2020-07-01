@@ -1,4 +1,4 @@
-
+const { webperfscore } = require('webperfscore');
 const {
   extractDataFromPerformanceMetrics,
 } = require('./helper');
@@ -111,6 +111,16 @@ async function doTest(page, client, url) {
     timeOrigin: performance.timeOrigin,
   });
   performance.speedIndex = trace.speedIndex;
+
+  // score
+  const result = webperfscore({
+    'first-contentful-paint': performance.firstContentfulPaint,
+    'first-meaningful-paint': performance.firstMeaningfulPaint,
+    'speed-index': performance.speedIndex,
+    'fully-loaded': performance.domComplete - performance.timeOrigin,
+  });
+   
+  performance.score = result.score; // 分值
 
   // await page.screenshot({ path: 'example.png' });
   return performance;

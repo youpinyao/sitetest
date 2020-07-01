@@ -61,7 +61,7 @@ app.post('/api/sitetest', upload.none(), (req, res) => {
 });
 
 app.post('/api/callback', upload.none(), (req, res) => {
-  console.log('/api/callback', req.body.id, req.body.status);
+  console.log('/api/callback', req.body, req.body.status);
   res.status(200).send();
 });
 

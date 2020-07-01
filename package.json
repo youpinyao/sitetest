@@ -19,7 +19,8 @@
     "puppeteer": "^4.0.0",
     "speedline": "^1.4.2",
     "speedline-core": "^1.4.2",
-    "superagent": "^5.3.1"
+    "superagent": "^5.3.1",
+    "webperfscore": "0.0.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.4"
