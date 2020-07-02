@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const task = require('./src/task');
+const testing = require('./src/testing');
 const upload = multer();
 const app = express();
 const port = process.env.PORT || 4400;
@@ -18,7 +19,7 @@ app.use(bodyParser.urlencoded({
 
 
 app.get('/ping', (req, res) => {
-  res.status(200).send();
+  res.status(200).send(testing.read());
 })
 
 app.post('/api/sitetest', upload.none(), (req, res) => {

@@ -1,4 +1,4 @@
-const { webperfscore } = require('webperfscore');
+const { webperfscore, defaultAudits } = require('webperfscore');
 const {
   extractDataFromPerformanceMetrics,
 } = require('./helper');
@@ -16,6 +16,7 @@ module.exports = async ({
 } = {}) => {
   const browser = await puppeteer.launch({
     headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
     // headless: false,
     // devtools: true,
     // defaultViewport: {
@@ -107,17 +108,29 @@ async function doTest(page, client, url) {
   performance.firstMeaningfulPaint = FirstMeaningfulPaint;
 
   // speedIndex
-  const trace = await speedline('trace.json', {
-    timeOrigin: performance.timeOrigin,
-  });
-  performance.speedIndex = trace.speedIndex;
+  // const trace = await speedline('trace.json', {
+  //   timeOrigin: performance.timeOrigin,
+  // });
+  // performance.speedIndex = trace.speedIndex;
 
   // score
   const result = webperfscore({
     'first-contentful-paint': performance.firstContentfulPaint,
     'first-meaningful-paint': performance.firstMeaningfulPaint,
-    'speed-index': performance.speedIndex,
+    // 'speed-index': performance.speedIndex,
     'fully-loaded': performance.domComplete - performance.timeOrigin,
+  }, {
+    score: 10,
+    audits: (() => {
+      const audits = [].concat(defaultAudits);
+
+      audits.splice(2, 1);
+
+      audits[1].weight = 3;
+      audits[2].weight = 5;
+      
+      return audits;
+    })(),
   });
    
   performance.score = result.score; // 分值

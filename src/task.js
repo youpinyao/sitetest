@@ -80,18 +80,18 @@ const start = () => {
   console.log('----------------------------');
   console.log('url', url);
   console.log('callback_url', callback_url);
-  console.log('network', network);
+  console.log('network', networks[network] ? network : 'wifi');
   console.log('platform', platform);
   console.log('----------------------------');
 
   test({
     url,
-    network: networks[network],
+    network: networks[network] || networks.wifi,
     platform,
   }).then((data) => {
     testEnd(data);
   }, (e) => {
-    testEnd();
+    testEnd(e.stack);
   });
 }
 
@@ -106,17 +106,22 @@ function doCallback({
 }) {
   if (callback_url) {
     console.log('callback_url start');
+
+    const res = {
+      id,
+      url,
+      network,
+      platform,
+      callback_url,
+      ...render.response(data),
+    };
+
+    testing.write(JSON.stringify(res));
+    
     superagent
       .post(callback_url)
       .timeout(10000)
-      .send({
-        id,
-        url,
-        network,
-        platform,
-        callback_url,
-        ...render.response(data),
-      }) // sends a JSON post body
+      .send(res) // sends a JSON post body
       .end((err, res) => {
         console.log('callback_url end');
         console.log('------------------------');

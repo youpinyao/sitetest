@@ -1,8 +1,14 @@
 module.exports = {
   score: () => { },
   response: (data = []) => {
+    if (typeof data === 'string') {
+      return {
+        status: 500,
+        msg: data,
+      };
+    }
     return {
-      status: data.length ? 200 : 500,
+      status: 200,
       monitorTimes: data.map(item => {
         return {
           // 白屏时间
