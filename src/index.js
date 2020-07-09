@@ -47,10 +47,14 @@ module.exports = async ({
     throw error;
   }
 
+  if (!performances.length) {
+    throw new Error('performances 为空，数据异常，请重新发起测试');
+  }
+
   return performances;
 };
 
-async function doTest(page, client, url) {
+async function doTest(page, client, url) {    
   await page.tracing.start({ path: 'trace.json', screenshots: true });
 
   await page.goto(url, {
