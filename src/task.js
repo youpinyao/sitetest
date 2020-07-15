@@ -124,6 +124,10 @@ function doCallback({
       .send(res) // sends a JSON post body
       .end((err, res) => {
         console.log('callback_url end');
+        
+        if (err && err !== 'null') {
+          testing.write(JSON.stringify(err));
+        }
         console.log('------------------------');
       });
   }

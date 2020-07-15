@@ -5,6 +5,7 @@ const {
 const puppeteer = require('puppeteer');
 const speedline = require('speedline-core');
 const NETWORK_PRESETS = require('./network');
+const testing = require('./testing');
 const iphone = puppeteer.devices['iPhone 8'];
 const android = puppeteer.devices['Nexus 10'];
 
@@ -12,7 +13,7 @@ module.exports = async ({
   url = '',
   network = NETWORK_PRESETS.WiFi,
   platform = 'ios',
-  timeout = 10000,
+  timeout = 30000,
 } = {}) => {
   const browser = await puppeteer.launch({
     headless: true,
@@ -30,7 +31,10 @@ module.exports = async ({
   await page.emulate(platform === 'ios' ? iphone : android);
   const client = await page.target().createCDPSession();
 
-  page.setDefaultTimeout(timeout);
+  await page.setDefaultTimeout(timeout);
+
+  // 删除userAgent 防止出现唤起app调用，非必填
+  await page.setUserAgent('');
   // await page.setCacheEnabled(false);
 
   // Set throttling property
@@ -38,9 +42,66 @@ module.exports = async ({
   await client.send('Performance.enable');
   const performances = [];
 
+  // 重定向时间计算
+  let redirectStartTime = 0;
+  let redirectCount = 0;
+  let redirectTime = 0;
+  // let maxRedirectCount = 0;
+  // let maxRedirectTime = 0;
+
+  const requests = [];
+
+  // 请求拦截
+  await page.setRequestInterception(true);
+  page.on('request', request => {
+    // console.log('GOT NEW REQUEST', request.url());
+    requests.push(request.url());
+
+    redirectStartTime = + new Date();
+    request.continue();
+  });
+  page.on('requestfailed', (request, response) => {
+    let failureText = request.failure().errorText;
+    // console.log('GOT NEW FAIL', failureText, request.url(), request.response() ? request.response().status() : 200);
+    requests.push(failureText);
+  });
+  page.on('response', response => {
+    // console.log('GOT NEW RESPONSE', response.status());
+    requests.push(response.status());
+
+    if (response.status() === 302) {
+      redirectTime += (+new Date()) - redirectStartTime;
+      redirectCount++;
+    }
+  });
+  const setDirect = () => {
+    performances[performances.length - 1].redirectTime = redirectTime;
+    performances[performances.length - 1].redirectCount = redirectCount;
+    redirectStartTime = 0;
+    redirectTime = 0;
+    redirectCount = 0;
+  }
+
   try {
-    performances.push(await doTest(page, client, url));
-    performances.push(await doTest(page, client, url));
+    for (let i = 0; i < 2; i++) {
+      performances.push(await doTest(page, client, url));
+      setDirect();
+    }
+
+    testing.log(requests.join('<br />'));
+
+    // // 为了拿到弱网的302跳转
+    // await client.send('Network.emulateNetworkConditions', NETWORK_PRESETS.GPRS);
+    // await page.setCacheEnabled(false);
+    // for (let i = 0; i < 4; i++) {
+    //   performances.push(await doTest(page, client, url));
+    //   setDirect();
+    // }
+    // performances.forEach((performance) => {
+    //   performance.redirectCount += maxRedirectCount;
+    //   performance.redirectTime += maxRedirectTime;
+    // });
+
     await browser.close();
   } catch (error) {
     await browser.close();
@@ -51,10 +112,10 @@ module.exports = async ({
     throw new Error('performances 为空，数据异常，请重新发起测试');
   }
 
-  return performances;
+  return performances.splice(0, 2);
 };
 
-async function doTest(page, client, url) {    
+async function doTest(page, client, url) {
   await page.tracing.start({ path: 'trace.json', screenshots: true });
 
   await page.goto(url, {
@@ -111,6 +172,11 @@ async function doTest(page, client, url) {
   );
   performance.firstMeaningfulPaint = FirstMeaningfulPaint;
 
+  // fix https://apps.apple.com/cn/app/id982906456 这种网站会读取错误，做了缓存特殊处理
+  if (performance.firstMeaningfulPaint < 0) {
+    performance.firstMeaningfulPaint = performance.firstContentfulPaint;
+  }
+
   // speedIndex
   // const trace = await speedline('trace.json', {
   //   timeOrigin: performance.timeOrigin,
@@ -132,11 +198,11 @@ async function doTest(page, client, url) {
 
       audits[1].weight = 3;
       audits[2].weight = 5;
-      
+
       return audits;
     })(),
   });
-   
+
   performance.score = result.score; // 分值
 
   // await page.screenshot({ path: 'example.png' });

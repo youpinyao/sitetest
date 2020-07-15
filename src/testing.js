@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const testPath = path.resolve(__dirname, '../testing.json');
 const historyPath = path.resolve(__dirname, '../test-history.json');
+const logPath = path.resolve(__dirname, '../test-log.json');
 
 const is = () => {
   return fs.existsSync(testPath) && fs.readFileSync(testPath).toString() === 'true';
@@ -17,11 +18,20 @@ const write = (str) => {
   fs.writeFileSync(historyPath, str);
 }
 
+const log = (str) => {
+  fs.writeFileSync(logPath, str);
+}
+
 const read = () => {
+  let str = '';
   if (fs.existsSync(historyPath)) {
-    return fs.readFileSync(historyPath).toString();
+    str += fs.readFileSync(historyPath).toString();
   }
-  return 'empty';
+  str += '<br /><br />'
+  if (fs.existsSync(logPath)) {
+    str += fs.readFileSync(logPath).toString();
+  }
+  return str || 'empty';
 }
 
 no();
@@ -31,4 +41,5 @@ module.exports = {
   yes,
   write,
   read,
+  log,
 }
