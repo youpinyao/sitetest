@@ -34,6 +34,7 @@ const add = ({
     callback_url,
     network,
     platform,
+    retry: 2,
   });
 
   setList(list);
@@ -58,7 +59,8 @@ const start = () => {
     url,
     callback_url,
     network,
-    platform
+    platform,
+    retry = 0,
   } = list[0];
 
   const testEnd = (data) => {
@@ -91,7 +93,18 @@ const start = () => {
   }).then((data) => {
     testEnd(data);
   }, (e) => {
-    testEnd(e.stack);
+    // 特定情况重试一次
+    if (retry > 0) {
+      list = getList();
+      if (list.length) {
+        list[0].retry = parseInt(list[0].retry || 0) - 1;
+      }
+      setList(list);
+      testing.no();
+      start();
+    } else {
+      testEnd(e.stack);
+    }
   });
 }
 
